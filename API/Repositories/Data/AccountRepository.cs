@@ -16,6 +16,21 @@ public class AccountRepository : GeneralRepository<Account, string>, IAccountRep
         this.context = context;
     }
 
+    public async Task<List<string>> GetRoles(string email)
+    {
+        var getNIK = await context.Employees.FirstOrDefaultAsync(e => e.Email == email);
+        var getRoles = await context.AccountRoles
+            .Where(
+            ar => ar.AccountNIK == getNIK.NIK)
+            .Join(context.Role,
+            ar => ar.RoleId,
+            r => r.Id,
+            (ar, r) => r.Name)
+            .ToListAsync();
+
+        return getRoles;
+    }
+
     public async Task<UserDataVM> GetUserData(string email)
     {
         var result = await context.Employees.Select(e => new UserDataVM
@@ -110,6 +125,14 @@ public class AccountRepository : GeneralRepository<Account, string>, IAccountRep
                 await context.Accounts.AddAsync(account);
                 await context.SaveChangesAsync();
 
+                var accountRole = new AccountRole()
+                {
+                    AccountNIK = registerVM.NIK,
+                    RoleId = 2
+                };
+
+                await context.AccountRoles.AddAsync(accountRole);
+                await context.SaveChangesAsync();
                 await transaction.CommitAsync();
                 return 1;
             }

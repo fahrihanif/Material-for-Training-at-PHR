@@ -3,6 +3,7 @@ using API_CodeFirst.Base;
 using API_CodeFirst.Repositories.Interface;
 using API_CodeFirst.ViewModels;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
@@ -12,6 +13,7 @@ using System.Text;
 namespace API_CodeFirst.Controllers;
 [Route("api/[controller]")]
 [ApiController]
+[EnableCors("CORSLOGIN")]
 public class AccountsController : BaseController<IAccountRepository, Account, string>
 {
     private readonly IAccountRepository repository;
@@ -61,9 +63,15 @@ public class AccountsController : BaseController<IAccountRepository, Account, st
         var userdata = await repository.GetUserData(loginVM.Email);
         var claims = new List<Claim>()
         {
-            new Claim("Email", userdata.Email),
-            new Claim("FullName", userdata.FullName)
+            new Claim(ClaimTypes.Email, userdata.Email),
+            new Claim(ClaimTypes.Name, userdata.FullName)
         };
+
+        var getRoles = await repository.GetRoles(loginVM.Email);
+        foreach (var item in getRoles)
+        {
+            claims.Add(new Claim(ClaimTypes.Role, item));
+        }
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["JWT:Key"]));
         var signIn = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);

@@ -14,6 +14,23 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 
+// Configure CORS
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.AllowAnyOrigin();
+        policy.AllowAnyHeader();
+        policy.AllowAnyMethod();
+    });
+    options.AddPolicy("CORSLOGIN", policy =>
+    {
+        policy.WithOrigins("");
+        policy.WithMethods("");
+        policy.WithHeaders("");
+    });
+});
+
 builder.Services.AddScoped(typeof(IGeneralRepository<,>), typeof(GeneralRepository<,>));
 builder.Services.AddScoped<IUniversityRepository, UniversityRepository>();
 builder.Services.AddScoped<IAccountRepository, AccountRepository>();
@@ -36,8 +53,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     {
         options.RequireHttpsMetadata = false;
         options.SaveToken = true;
-        options.TokenValidationParameters = new()
-        {
+        options.TokenValidationParameters = new TokenValidationParameters {
             ValidateAudience = true,
             ValidAudience = builder.Configuration["JWT:Audience"],
             ValidateIssuer = true,
@@ -96,7 +112,9 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.UseAuthentication();
+app.UseCors(); //Enable Cors
+
+app.UseAuthentication(); //Use Authorize
 
 app.UseAuthorization();
 

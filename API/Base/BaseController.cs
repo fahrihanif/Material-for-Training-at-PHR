@@ -1,4 +1,5 @@
 ﻿using API_CodeFirst.Repositories.Interface;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Net;
 
@@ -6,6 +7,7 @@ namespace API_CodeFirst.Base;
 
 [Route("api/[controller]")]
 [ApiController]
+[Authorize]
 public class BaseController<IRepository, Entity, Key> : ControllerBase
     where Entity : class
     where IRepository : IGeneralRepository<Entity, Key>

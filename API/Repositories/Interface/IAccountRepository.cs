@@ -6,5 +6,6 @@ namespace API_CodeFirst.Repositories.Interface;
 public interface IAccountRepository : IGeneralRepository<Account, string>
 {
     Task<int> Register(RegisterVM registerVM);
-    Task<int> Login(LoginVM loginVM);
+    Task<bool> Login(LoginVM loginVM);
+    Task<UserDataVM> GetUserData(string email);
 }

@@ -7,6 +7,7 @@ namespace API_CodeFirst.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
+
 public class UniversitiesController : BaseController<IUniversityRepository, University, int>
 {
     public UniversitiesController(IUniversityRepository repository) : base(repository)

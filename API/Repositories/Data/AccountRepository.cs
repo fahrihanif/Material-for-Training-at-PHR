@@ -16,13 +16,24 @@ public class AccountRepository : GeneralRepository<Account, string>, IAccountRep
         this.context = context;
     }
 
-    public async Task<int> Login(LoginVM loginVM)
+    public async Task<UserDataVM> GetUserData(string email)
     {
-        var userdataMethod = await context.Employees.Join(context.Accounts, e => e.NIK, a => a.EmployeeNIK, (e, a) => new LoginVM
+        var result = await context.Employees.Select(e => new UserDataVM
+        {
+            Email = e.Email,
+            FullName = String.Concat(e.FirstName, " ", e.LastName),
+        }).FirstOrDefaultAsync(e => e.Email == email);
+
+        return result;
+    }
+
+    public async Task<bool> Login(LoginVM loginVM)
+    {
+        /*var userdataMethod = await context.Employees.Join(context.Accounts, e => e.NIK, a => a.EmployeeNIK, (e, a) => new LoginVM
         {
             Email = e.Email,
             Passsword = a.Password
-        }).FirstOrDefaultAsync(e => e.Email == loginVM.Email);
+        }).FirstOrDefaultAsync(e => e.Email == loginVM.Email);*/
 
         var userdataQuery = await (from e in context.Employees
                                    join a in context.Accounts
@@ -35,15 +46,10 @@ public class AccountRepository : GeneralRepository<Account, string>, IAccountRep
 
         if (userdataQuery is null)
         {
-            return 0;
+            return false;
         }
 
-        var result = Hashing.ValidatePassword(loginVM.Passsword, userdataQuery.Passsword);
-        if (result)
-        {
-            return 1;
-        }
-        return 0;
+        return Hashing.ValidatePassword(loginVM.Passsword, userdataQuery.Passsword);
     }
 
     public async Task<int> Register(RegisterVM registerVM)

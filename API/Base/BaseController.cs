@@ -108,7 +108,7 @@ public class BaseController<IRepository, Entity, Key> : ControllerBase
         });
     }
 
-    [HttpDelete]
+    [HttpDelete("{key}")]
     public async Task<ActionResult> Delete(Key key)
     {
         var result = await repository.DeleteAsync(key);

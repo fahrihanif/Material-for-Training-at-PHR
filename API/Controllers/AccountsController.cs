@@ -1,28 +1,24 @@
 ﻿using API.Models;
 using API_CodeFirst.Base;
+using API_CodeFirst.Handlers;
 using API_CodeFirst.Repositories.Interface;
 using API_CodeFirst.ViewModels;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Text;
 
 namespace API_CodeFirst.Controllers;
 [Route("api/[controller]")]
 [ApiController]
-[EnableCors("CORSLOGIN")]
 public class AccountsController : BaseController<IAccountRepository, Account, string>
 {
     private readonly IAccountRepository repository;
-    private readonly IConfiguration configuration;
+    private readonly ITokenService _tokenService;
 
-    public AccountsController(IAccountRepository repository, IConfiguration configuration) : base(repository)
+    public AccountsController(IAccountRepository repository, ITokenService tokenService) : base(repository)
     {
         this.repository = repository;
-        this.configuration = configuration;
+        _tokenService = tokenService;
     }
 
     [HttpPost("Register")]
@@ -64,7 +60,8 @@ public class AccountsController : BaseController<IAccountRepository, Account, st
         var claims = new List<Claim>()
         {
             new Claim(ClaimTypes.Email, userdata.Email),
-            new Claim(ClaimTypes.Name, userdata.FullName)
+            new Claim(ClaimTypes.Name, userdata.Email),
+            new Claim(ClaimTypes.NameIdentifier, userdata.FullName)
         };
 
         var getRoles = await repository.GetRoles(loginVM.Email);
@@ -73,17 +70,16 @@ public class AccountsController : BaseController<IAccountRepository, Account, st
             claims.Add(new Claim(ClaimTypes.Role, item));
         }
 
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["JWT:Key"]));
-        var signIn = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-        var token = new JwtSecurityToken(
-            issuer: configuration["JWT:Issuer"],
-            audience: configuration["JWT:Audience"],
-            claims: claims,
-            expires: DateTime.Now.AddMinutes(10),
-            signingCredentials: signIn
-            );
+        var accessToken = _tokenService.GenerateAccessToken(claims);
+        var refreshToken = _tokenService.GenerateRefreshToken();
 
-        var generateToken = new JwtSecurityTokenHandler().WriteToken(token);
+        await repository.UpdateToken(userdata.Email, refreshToken, DateTime.Now.AddDays(1)); // Token will expired in a day
+
+        var generateToken = new AuthenticatedResponseVM
+        {
+            Token = accessToken,
+            RefreshToken = refreshToken
+        };
 
         return Ok(new
         {
@@ -91,5 +87,56 @@ public class AccountsController : BaseController<IAccountRepository, Account, st
             Message = "Login Success!",
             Data = generateToken
         });
+    }
+
+    [HttpPost]
+    [Route("RefreshToken")]
+    public async Task<IActionResult> Refresh(TokenAPIVM tokenApi)
+    {
+        if (tokenApi is null)
+            return BadRequest("Invalid client request");
+
+        var accessToken = tokenApi.AccessToken;
+        var refreshToken = tokenApi.RefreshToken;
+
+        var principal = _tokenService.GetPrincipalFromExpiredToken(accessToken);
+        var email = principal.Identity.Name; //this is mapped to the Name claim by default
+
+        var user = await repository.GetAccountByEmail(email);
+
+        if (user is null || user.RefreshToken != refreshToken || user.RefreshTokenExpiryTime <= DateTime.Now)
+            return BadRequest("Invalid client request");
+
+        var newAccessToken = _tokenService.GenerateAccessToken(principal.Claims);
+        var newRefreshToken = _tokenService.GenerateRefreshToken();
+
+        repository.UpdateToken(email, newRefreshToken);
+
+        var refreshedToken = new AuthenticatedResponseVM
+        {
+            Token = newAccessToken,
+            RefreshToken = newRefreshToken
+        };
+
+        return Ok(new
+        {
+            StatusCode = 200,
+            Message = "New Token Generated!",
+            Data = refreshedToken
+        });
+    }
+
+    [HttpPost, Authorize]
+    [Route("RevokeToken")]
+    public async Task<IActionResult> Revoke()
+    {
+        var email = User.Identity.Name;
+
+        var user = await repository.GetAccountByEmail(email);
+        if (user is null) return BadRequest();
+
+        repository.UpdateToken(email, null);
+
+        return NoContent();
     }
 }

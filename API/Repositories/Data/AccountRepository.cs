@@ -47,7 +47,7 @@ public class AccountRepository : GeneralRepository<Account, string>, IAccountRep
         /*var userdataMethod = await context.Employees.Join(context.Accounts, e => e.NIK, a => a.EmployeeNIK, (e, a) => new LoginVM
         {
             Email = e.Email,
-            Passsword = a.Password
+            Password = a.Password
         }).FirstOrDefaultAsync(e => e.Email == loginVM.Email);*/
 
         var userdataQuery = await (from e in context.Employees
@@ -142,7 +142,43 @@ public class AccountRepository : GeneralRepository<Account, string>, IAccountRep
                 return 0;
             }
         }
+    }
 
+    public async Task<int> UpdateToken(string email, string refreshToken, DateTime expiryTime)
+    {
+        var getNIK = await context.Employees.FirstOrDefaultAsync(e => e.Email == email);
+        if (getNIK == null)
+        {
+            return 0;
+        }
+        var account = await context.Accounts.FirstOrDefaultAsync(a => a.EmployeeNIK == getNIK.NIK);
+        account.RefreshToken = refreshToken;
+        account.RefreshTokenExpiryTime = expiryTime;
 
+        return await base.UpdateAsync(account);
+    }
+
+    public async Task<int> UpdateToken(string email, string refreshToken)
+    {
+        var getNIK = await context.Employees.FirstOrDefaultAsync(e => e.Email == email);
+        if (getNIK == null)
+        {
+            return 0;
+        }
+        var account = await context.Accounts.FirstOrDefaultAsync(a => a.EmployeeNIK == getNIK.NIK);
+        account.RefreshToken = refreshToken;
+
+        return await base.UpdateAsync(account);
+    }
+
+    public async Task<Account?> GetAccountByEmail(string email)
+    {
+        var getNIK = await context.Employees.FirstOrDefaultAsync(e => e.Email == email);
+        if (getNIK == null)
+        {
+            return null;
+        }
+        var account = await context.Accounts.FirstOrDefaultAsync(a => a.EmployeeNIK == getNIK.NIK);
+        return account;
     }
 }

@@ -11,6 +11,10 @@ public class Account
     public string EmployeeNIK { get; set; }
     [Column("password", TypeName = "nvarchar(255)")]
     public string Password { get; set; }
+    [Column("refresh_token")]
+    public string? RefreshToken { get; set; }
+    [Column("refresh_token_expiry_time")]
+    public DateTime RefreshTokenExpiryTime { get; set; }
 
     // Cardinality
     [JsonIgnore]

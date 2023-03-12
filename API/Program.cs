@@ -1,4 +1,5 @@
 using API.Contexts;
+using API_CodeFirst.Handlers;
 using API_CodeFirst.Repositories;
 using API_CodeFirst.Repositories.Data;
 using API_CodeFirst.Repositories.Interface;
@@ -23,12 +24,6 @@ builder.Services.AddCors(options =>
         policy.AllowAnyHeader();
         policy.AllowAnyMethod();
     });
-    options.AddPolicy("CORSLOGIN", policy =>
-    {
-        policy.WithOrigins("");
-        policy.WithMethods("");
-        policy.WithHeaders("");
-    });
 });
 
 builder.Services.AddScoped(typeof(IGeneralRepository<,>), typeof(GeneralRepository<,>));
@@ -39,6 +34,7 @@ builder.Services.AddScoped<IEducationRepository, EducationRepository>();
 builder.Services.AddScoped<IEmployeeRepository, EmployeeRepository>();
 builder.Services.AddScoped<IProfilingRepository, ProfilingRepository>();
 builder.Services.AddScoped<IRoleRepository, RoleRepository>();
+builder.Services.AddTransient<ITokenService, TokenService>();
 
 //Configure DbContext to SQL Server
 var connectionString = builder.Configuration.GetConnectionString("Connection");
@@ -53,7 +49,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     {
         options.RequireHttpsMetadata = false;
         options.SaveToken = true;
-        options.TokenValidationParameters = new TokenValidationParameters {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
             ValidateAudience = true,
             ValidAudience = builder.Configuration["JWT:Audience"],
             ValidateIssuer = true,

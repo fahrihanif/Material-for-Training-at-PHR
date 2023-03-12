@@ -1,5 +1,4 @@
 ﻿using API_CodeFirst.Repositories.Interface;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Net;
 
@@ -7,7 +6,7 @@ namespace API_CodeFirst.Base;
 
 [Route("api/[controller]")]
 [ApiController]
-[Authorize]
+//[Authorize]
 public class BaseController<IRepository, Entity, Key> : ControllerBase
     where Entity : class
     where IRepository : IGeneralRepository<Entity, Key>
@@ -108,7 +107,7 @@ public class BaseController<IRepository, Entity, Key> : ControllerBase
         });
     }
 
-    [HttpDelete]
+    [HttpDelete("{key}")]
     public async Task<ActionResult> Delete(Key key)
     {
         var result = await repository.DeleteAsync(key);

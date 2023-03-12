@@ -135,7 +135,7 @@ public class AccountsController : BaseController<IAccountRepository, Account, st
         var user = await repository.GetAccountByEmail(email);
         if (user is null) return BadRequest();
 
-        repository.UpdateToken(email, null);
+        await repository.UpdateToken(email, null);
 
         return NoContent();
     }
